@@ -1,0 +1,638 @@
+\documentclass[10pt,compress,usenames,dvipsnames,aspectratio=169]{beamer}
+
+% Ulepszony, estetyczny ciemny motyw
+\usetheme{CambridgeUS}
+\useoutertheme{shadow}
+\usecolortheme{owl}
+
+% Ustawienia dla polskich znaków
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[polish]{babel}
+
+% Usunięcie jasnego nagłówka
+\setbeamertemplate{headline}{}
+\setbeamertemplate{footline}{}
+
+% Tło oraz kolory tekstu
+\setbeamercolor{background canvas}{bg=black!95}
+\setbeamercolor{normal text}{fg=white}
+\setbeamercolor{frametitle}{bg=black!85, fg=white}
+\setbeamercolor{framesubtitle}{fg=gray!60}
+\setbeamercolor{title}{fg=white}
+\setbeamercolor{subtitle}{fg=gray!60}
+\setbeamercolor{author}{fg=white}
+\setbeamercolor{institute}{fg=white}
+\setbeamercolor{date}{fg=white}
+\setbeamercolor{itemize item}{fg=cyan}
+\setbeamercolor{enumerate item}{fg=cyan}
+
+% Dodatkowe kolory dla czytelności
+\definecolor{bgcode}{RGB}{30,30,30}
+\definecolor{fgcode}{RGB}{220,220,220}
+\definecolor{keyword}{RGB}{86,156,214}
+\definecolor{comment}{RGB}{87,166,74}
+\definecolor{string}{RGB}{214,157,133}
+
+% Konfiguracja pakietu listings do podświetlania składni
+\usepackage{listings}
+\lstdefinelanguage{JavaScript}{
+    morekeywords={break,case,catch,continue,
+        debugger,default,delete,do,else,false,
+        finally,for,function,if,in,instanceof,new,
+        null,return,switch,this,throw,true,try,
+        typeof,var,void,while,with},
+    sensitive=true,
+    morecomment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    morestring=[b]",
+    morestring=[b]',
+    moredelim=[l][\color{keyword}]{.then},
+    moredelim=[l][\color{keyword}]{=>}
+}
+
+% Teraz można wczytać: 
+\lstloadlanguages{bash, Python, JavaScript}
+
+\lstdefinestyle{dark}{
+  backgroundcolor=\color{bgcode},
+  basicstyle=\ttfamily\small\color{fgcode},
+  keywordstyle=\color{keyword}\bfseries,
+  commentstyle=\color{comment}\itshape,
+  stringstyle=\color{string},
+  showstringspaces=false,
+  frame=single,
+  rulecolor=\color{gray!70},
+  numbers=left,
+  numberstyle=\tiny\color{gray!70},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  literate={ą}{{\k{a}}}1 {Ą}{{\k{A}}}1
+           {ć}{{\'{c}}}1 {Ć}{{\'{C}}}1
+           {ę}{{\k{e}}}1 {Ę}{{\k{E}}}1
+           {ł}{{\l}}1 {Ł}{{\L}}1
+           {ń}{{\'{n}}}1 {Ń}{{\'{N}}}1
+           {ó}{{\'{o}}}1 {Ó}{{\'{O}}}1
+           {ś}{{\'{s}}}1 {Ś}{{\'{S}}}1
+           {ż}{{\.{z}}}1 {Ż}{{\.{Z}}}1
+           {ź}{{\'{z}}}1 {Ź}{{\'{Z}}}1
+}
+
+\title{API, HTTP i REST}
+\subtitle{Wprowadzenie do komunikacji sieciowej}
+\author{Adam Djellouli}
+\date{\today}
+
+\begin{document}
+
+% --- Slajd tytułowy (bez nagłówka/stopki) ---
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+% --- Pierwszy slajd z agendą / co będzie wiedzieć ---
+\begin{frame}[fragile]{Czego się dowiesz?}
+  \begin{itemize}
+    \item Czym jest protokół HTTP, jak wygląda wymiana żądania i odpowiedzi oraz metody \texttt{GET}, \texttt{POST}, \texttt{DELETE} i \texttt{PUT} wraz z kodami statusu.
+    \item Czym jest API, wprowadzenie do architektury REST oraz inne modele komunikacji.
+    \item Jak korzystać z API przy użyciu narzędzia \texttt{curl}, biblioteki \texttt{requests} w Pythonie i funkcji \texttt{fetch} w JavaScript.
+    \item Podstawowe narzędzia DevTools: śledzenie żądań sieciowych i analiza nagłówków.
+    \item Co to jest JSON, dlaczego jest popularny i jakie są jego ograniczenia.
+  \end{itemize}
+\end{frame}
+
+% --- Przykład struktury kolejnych sekcji ---
+\section{HTTP — podstawy}
+
+\begin{frame}{Powtórka}
+  \begin{itemize}
+    \item Serwer to komputer lub program, który udostępnia zasoby lub usługi, a klient wysyła zadania do serwera. Serwerów może być wiele, współpracujących ze sobą.
+    \item Frontend to część aplikacji działająca po stronie użytkownika, na przykład przeglądarka renderująca stronę, a backend to serwer odpowiedzialny za przetwarzanie zadań i wysyłanie odpowiedzi.
+    \item Współczesne systemy są wielowarstwowe – backend jednej usługi może być frontendem dla innej usługi (mikroserwisy).
+    \item Przykład: przeglądarka łączy się z serwerem, który udostępnia pliki HTML, JS, CSS i obrazy; podobnie jądro systemu operacyjnego współpracuje ze sterownikami, które komunikują się z kontrolerami dysków.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Jądro — Sterownik — Kontroler dysku}
+  \vfill
+  \begin{center}
+    \begin{minipage}{0.4\textwidth}
+      {\scriptsize
+      \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
++---------------------+
+|   Jądro (Kernel)    |
+|     [Backend]       |
++----------+----------+
+           |
+           | komunikacja
+           |
++----------v---------------+
+|    Sterownik (Driver)    |
+| [Frontend dla kontrolera |
+|   oraz backend dla k.'a] |
++----------+---------------+
+           |
+           | komunikacja
+           |
++----------v----------+
+| Kontroler dysku     |
+|  (Disk Controller)  |
+|     [Hardware]      |
++---------------------+
+      \end{lstlisting}
+      }
+    \end{minipage}
+  \end{center}
+  \vfill
+\end{frame}
+
+
+\begin{frame}{Model Klient Serwer}
+  \vfill
+  {\tiny
+  \begin{center}
+    \begin{tabular}{p{3cm} p{4.5cm} p{6cm}}
+      \textbf{Kategoria} & \textbf{Serwer} & \textbf{Typowy klient / protokół} \\[0.5ex]
+      \hline
+      \\
+      \textbf{Pliki i udziały} &
+        \textbf{SMB/CIFS} (Samba, Windows File Server) &
+        Eksplorator Windows, \texttt{smbclient}, macOS Finder \\[0.5ex]
+       &
+        \textbf{FTP/SFTP} &
+        FileZilla, WinSCP, \texttt{ftp} / \texttt{sftp} w terminalu \\[1ex]
+      \textbf{Bazy danych} &
+        \textbf{PostgreSQL} &
+        psql, pgAdmin, aplikacje korzystające z drivera PG \\[0.5ex]
+       &
+        \textbf{MongoDB} &
+        mongo shell, aplikacje z driverem Mongo \\[1ex]
+      \textbf{Web / API} &
+        \textbf{HTTP serwer} (Apache, Nginx, Node.js) &
+        Przeglądarka, \texttt{curl}, aplikacje mobilne/SPA \\[1ex]
+      \textbf{Poczta elektroniczna} &
+        \textbf{SMTP} (wysyłka) &
+        Mail Transfer Agent (Postfix) → serwery dalej / klient wysyłający \\[0.5ex]
+       &
+        \textbf{IMAP / POP3} (odbiór) &
+        Thunderbird, Outlook, aplikacje mobilne \\[1ex]
+      \textbf{Nazwa hostów} &
+        \textbf{DNS} &
+        System resolver, \texttt{dig}, przeglądarka \\[1ex]
+      \textbf{Czas} &
+        \textbf{NTP} &
+        Usługa czasu w systemie operacyjnym \\[1ex]
+      \textbf{Zdalny dostęp} &
+        \textbf{SSH} &
+        \texttt{ssh} w terminalu, PuTTY, scp/rsync \\[0.5ex]
+       &
+        \textbf{RDP} &
+        Microsoft Remote Desktop, rdesktop \\[1ex]
+      \textbf{Kolejki wiadomości / IoT} &
+        \textbf{RabbitMQ (AMQP)} &
+        Producent/Konsument AMQP, micro-services \\[0.5ex]
+       &
+        \textbf{MQTT broker} (Mosquitto, HiveMQ) &
+        Czujniki IoT, Home-Assistant \\[1ex]
+      \textbf{Cache / pamięć klucz-wartość} &
+        \textbf{Redis} &
+        Aplikacje web, CLI \texttt{redis-cli} \\[1ex]
+      \textbf{Druk} &
+        \textbf{CUPS Print Server} &
+        Dialog drukowania w systemie, IPP \\[1ex]
+      \textbf{Strumieniowanie multimediów} &
+        \textbf{Icecast / RTSP} &
+        VLC, odtwarzacze sieciowe \\[1ex]
+      \textbf{Gry online} &
+        \textbf{Minecraft Server, CS:GO Dedicated Server} &
+        Klient gry \\
+    \end{tabular}
+  \end{center}
+
+  W każdym z przypadków jedna strona (\textbf{serwer}) \textbf{nasłuchuje} na określonym porcie, czeka na żądania i zarządza współdzielonym zasobem (pliki, dane, czas, druk, audio itp.). Druga strona (\textbf{klient}) \textbf{nawiązuje połączenie}, wysyła zapytania lub komendy i odbiera odpowiedzi. Układ jest więc asymetryczny – serwer utrzymuje usługę, klient z niej korzysta.
+  }
+  \vfill
+\end{frame}
+
+\begin{frame}{Jak działa klasyczny serwer?}
+\small
+  Serwer odczytuje z dysku plik HTML (oraz powiązane CSS/JS) i przekazuje go \emph{bez zmian} do przeglądarki.
+
+  \vspace{1ex}
+  \textbf{Dynamiczna strona (szablony)}
+  \begin{itemize}
+
+    \item Szablon HTML zawiera pola do uzupełnienia.
+    \item Serwer (lub interpreter / framework) wypełnia je danymi (użytkownik, stan aplikacji, baza).
+    \item Powstaje \textbf{nowo wygenerowany} dokument, który trafia do klienta.
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{Techniczny szczegół – odpowiedź HTTP}
+  \begin{itemize}
+    \item Serwer \textbf{nie wysyła „pliku” jako pliku}, lecz ramkę \textbf{Odpowiedź HTTP}:
+      \begin{itemize}\small
+        \item nagłówki (status, typ MIME, długość, kompresja)
+        \item ciało z treścią żądanego zasobu
+      \end{itemize}
+    \item Przy statycznej stronie treść = zawartość pliku; przy kompresji (gzip/br) treść jest skompresowana, ale efekt wizualny w przeglądarce pozostaje ten sam.
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{Co decyduje o rodzaju odpowiedzi?}
+  \begin{itemize}
+    \item \textbf{Nginx w trybie „static”} → serwuje pliki.
+    \item \textbf{Apache + PHP-FPM} → uruchamia kod PHP, wynik trafia do klienta.
+    \item \textbf{Serwer Pythona (Django/Flask/FastAPI)} → wykonuje kod Pythona i zwraca rezultat (HTML, JSON, inne).
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}{HTTP}
+  \begin{itemize}
+    \item Protokół warstwy aplikacji odpowiedzialny za komunikację \textbf{klient $\leftrightarrow$ serwer}
+    \item Definiuje \textbf{formatowanie i transmisję} wiadomości (żądanie / odpowiedź)
+    \item \textbf{Powszechnie stosowany} standard Web (HTTP/1.1, HTTP/2, HTTP/3)
+    \item \textbf{Nazwa domeny $\neq$ serwer} – musi zostać przetłumaczona przez \textbf{DNS} na adres IP serwera
+  \end{itemize}
+  
+\end{frame}
+
+
+\begin{frame}{Metody HTTP}
+Żeby zarządzać zasobami stosuje się metody:
+  \vspace{1ex}
+
+  \begin{itemize}
+    \item \textbf{POST} służy do tworzenia nowych zasobów (Create)
+    \item \textbf{GET} służy do pobierania zasobów (Retrieve)
+    \item \textbf{PUT} służy do aktualizowania istniejących zasobów (Update)
+    \item \textbf{DELETE} służy do usuwania zasobów (Delete)
+    \item Oprócz CRUD istnieją też inne metody, np.\ \textbf{HEAD}, \textbf{OPTIONS} czy \textbf{PATCH}.
+  \end{itemize}
+ 
+\end{frame}
+
+\begin{frame}{Kody Statusu}
+
+  \begin{itemize}
+    \item Teoria mówi, że kody 1xx–5xx jasno informują o wyniku żądania.
+    \item W praktyce wiele API zwraca 200 nawet przy błędzie, bo nie obsługują wyjątków w endpointach.
+    \item Często domyślny kod 500 pochodzi z frameworka, chociaż lepiej byłoby zwrócić np.\ 404 lub inny odpowiedni kod.
+    \item Niektórzy używają POST zamiast GET czy DELETE, bo chcą przesłać więcej danych lub uniknąć ograniczeń GET.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]{Żądanie (Request)}
+  \begin{itemize}
+    \item Klient wysyła żądanie przez sieć do serwera.
+    \item URL wskazuje, jaki zasób chcemy pobrać lub zmodyfikować (może zawierać parametry zapytania).
+    \item Metoda HTTP (GET, POST, PUT, DELETE) określa, co ma się stać z zasobem.
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{Podstawowe elementy żądania:}
+  \begin{center}
+    \begin{minipage}{0.6\textwidth}
+      \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+HTTP REQUEST  (klient -> serwer)
++----------------------------------------+
+| Request-Line                           |
+|   GET /index.html HTTP/1.1             |
++----------------------------------------+
+| Nagłówki (Headers)                     |
+|   Host: example.com                    |
+|   User-Agent: Mozilla/5.0 ...          |
+|   Accept: text/html                    |
+|   ...                                  |
++----------------------------------------+
+| Pusta linia (CRLF)                     |
++----------------------------------------+
+| Body (opcjonalny)                      |
+|   <- dla POST/PUT: JSON, formularz,    |
+|      plik ->                           |
++----------------------------------------+
+      \end{lstlisting}
+    \end{minipage}
+  \end{center}
+ 
+\end{frame}
+
+\begin{frame}[fragile]{Nagłówki i ciało żądania}
+  \begin{itemize}
+    \item metoda żądania (np.\ \texttt{POST}), adres URL (np.\ \texttt{/api/users}), wersja HTTP (np.\ \texttt{HTTP/1.1})
+    \item \texttt{Host}, czyli docelowy serwer (np.\ \texttt{example.com})
+    \item \texttt{Content-Type}, określający format ciała (np.\ \texttt{application/json})
+    \item \texttt{Content-Length}, czyli rozmiar ciała żądania
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{W ciele żądania przesyłamy dane (najczęściej w JSON):}
+  \begin{center}
+    \begin{minipage}{0.6\textwidth}
+      \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+{
+    "username": "jan_kowalski",
+    "email": "jan_kowalski@example.com",
+    "password": "haslo123"
+}
+      \end{lstlisting}
+    \end{minipage}
+  \end{center}
+\end{frame}
+
+\begin{frame}[fragile]{Odpowiedź (Response)}
+  \begin{itemize}
+    \item Serwer wysyła odpowiedź do klienta, używając protokołu HTTP.
+    \item Status-Line informuje o wersji HTTP, kodzie statusu i krótkim opisie (np.\ \texttt{HTTP/1.1 200 OK}).
+    \item Nagłówki (Headers) zawierają meta-informacje o odpowiedzi, takie jak \texttt{Content-Type}, \texttt{Content-Length}, \texttt{Cache-Control} itp.
+    \item Po pustej linii (CRLF) pojawia się ciało odpowiedzi (Body), które może być statycznym plikiem (HTML, obraz, CSS) lub wygenerowaną dynamicznie treścią.
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{Przykład struktury odpowiedzi HTTP:}
+  \begin{center}
+    \begin{minipage}{0.6\textwidth}
+      \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+HTTP RESPONSE  (serwer -> klient)
++------------------------------------------+
+| Status-Line                              |
+|   HTTP/1.1 200 OK                        |
++------------------------------------------+
+| Nagłówki (Headers)                       |
+|   Content-Type: text/html; charset=utf-8 |
+|   Content-Length: 347                    |
+|   Cache-Control: max-age=3600            |
+|   ...                                    |
++------------------------------------------+
+| Pusta linia (CRLF)                       |
++------------------------------------------+
+| Body                                     |
+|   <html> ...                             |
++------------------------------------------+
+      \end{lstlisting}
+    \end{minipage}
+  \end{center}
+
+\end{frame}
+
+\begin{frame}[fragile]{Jak wysłać żądania?}
+  Możesz użyć narzędzia \texttt{curl} w terminalu, które ma wiele opcji konfiguracyjnych. Przykład prostego żądania \texttt{POST} z JSON-em:
+    \vspace{1ex}
+
+  \begin{lstlisting}[style=dark, language=bash, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+curl -X POST https://twoj-serwer.pl/api/sciezka \
+  -H "Content-Type: application/json" \
+  -d '{"klucz1":"wartość1","klucz2":123,"klucz3":true}'
+  \end{lstlisting}
+    \vspace{1ex}
+
+  DevTools w przeglądarkach (Chrome, Firefox) to zintegrowane narzędzia dla deweloperów, które ułatwiają:
+  \begin{itemize}
+    \item analizę struktury i stylów strony,
+    \item podgląd i debugowanie kodu JavaScript,
+    \item monitorowanie sieci (\texttt{Network}) — widać wszystkie wysyłane żądania i odpowiedzi,
+    \item zarządzanie pamięcią podręczną, profilowanie wydajności i inne.
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]{fetch (JavaScript)}
+W JavaScript możesz użyć funkcji `fetch`:
+
+  \begin{lstlisting}[style=dark, language=JavaScript, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+fetch('https://twoj-serwer.pl/api/sciezka', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    klucz1: 'wartość1',
+    klucz2: 123,
+    klucz3: true
+  })
+})
+.then(response => {
+  if (!response.ok) {
+    throw new Error(`Błąd sieci: ${response.status}`);
+  }
+  return response.json();
+})
+.then(data => {
+  console.log('Odpowiedź z serwera:', data);
+})
+.catch(error => {
+  console.error('Coś poszło nie tak:', error);
+});
+  \end{lstlisting}
+  
+\end{frame}
+
+\begin{frame}[fragile]{requests (Python)}
+W Pythonie, za pomocą biblioteki `requests`, wygląda to tak:
+
+  \begin{lstlisting}[style=dark, language=Python, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+import requests
+
+url = 'https://twoj-serwer.pl/api/sciezka'
+payload = {
+  "klucz1": "wartość1",
+  "klucz2": 123,
+  "klucz3": True
+}
+response = requests.post(url, json=payload)
+if response.status_code == 200:
+  data = response.json()
+  print('Odpowiedź z serwera:', data)
+else:
+  print('Błąd:', response.status_code)
+  \end{lstlisting}
+  
+\end{frame}
+
+\begin{frame}[fragile]{Przykład żądania GET}
+  \begin{itemize}
+    \item \texttt{http://wttr.in/NAZWA\_MIASTA}
+    \item Chcemy pobrać dane pogodowe dla konkretnego miasta, np.\ Warszawy.
+    \item Nazwa hosta: \texttt{wttr.in}
+    \item Ścieżka: \texttt{/Warsaw} (gdzie \texttt{Warsaw} to \texttt{/NAZWA\_MIASTA})
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{Połączenie TCP/DNS}
+
+  Przeglądarka/klient tłumaczy \texttt{wttr.in} na adres IP i otwiera połączenie na porcie 80.
+
+  \vspace{1ex}
+  \textbf{Żądanie HTTP:}
+  \begin{center}
+    \begin{minipage}{0.5\textwidth}
+      \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+GET /Warsaw HTTP/1.1
+Host: wttr.in
+Accept: application/json
+Connection: close
+      \end{lstlisting}
+    \end{minipage}
+  \end{center}
+
+\end{frame}
+
+\begin{frame}[fragile]{Odpowiedź HTTP}
+  \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Content-Length: 1024
+Cache-Control: max-age=600
+Connection: close
+
+{
+ "current_condition":[
+   {
+     "temp_C":"16",
+     "weatherDesc":[{"value":"Sunny"}],
+     ...
+   }
+ ],
+ "weather":[
+   {
+     "date":"2025-06-03",
+     ...
+   },
+   ...
+ ]
+}
+  \end{lstlisting}
+
+  \vspace{1ex}
+  \begin{itemize}
+    \item Ścieżka \texttt{/Berlin} to \texttt{/NAZWA\_MIASTA}.
+    \item Nagłówek \texttt{Accept: application/json} prosi o JSON.
+    \item Serwer zwraca kod 200, nagłówki z typem treści \texttt{application/json} i ciało z danymi pogodowymi.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Przykład żądania POST}
+Wyślijmy żądanie POST na adres  \texttt{jsonplaceholder.typicode.com/posts}.
+  \begin{center}
+    \begin{minipage}{0.5\textwidth}
+      \begin{lstlisting}[style=dark, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+POST /posts HTTP/1.1
+Host: jsonplaceholder.typicode.com
+Content-Type: application/json; charset=UTF-8
+Content-Length:  fifty
+
+{"title":"abc","body":"xyz","userId":5}
+      \end{lstlisting}
+    \end{minipage}
+  \end{center}
+
+  \vspace{1ex}
+  \begin{itemize}
+    \item Metoda: \textbf{POST}
+    \item Ścieżka: \texttt{/posts}
+    \item Ciało żądania (JSON): \texttt{\{"title":"abc","body":"xyz","userId":5\}}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Przykład w \texttt{curl}}
+  \begin{lstlisting}[style=dark, language=bash, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+curl -X POST https://jsonplaceholder.typicode.com/posts \
+     -H "Content-Type: application/json; charset=UTF-8" \
+     -d '{"title":"abc","body":"xyz","userId":5}'
+  \end{lstlisting}
+
+
+  \vspace{1ex}
+  \textbf{Odpowiedź (JSON):}
+  \begin{verbatim}
+{
+  "id": 101,
+  "title": "abc",
+  "body": "xyz",
+  "userId": 5
+}
+  \end{verbatim}
+\end{frame}
+
+
+\begin{frame}{API}
+  \begin{itemize}
+    \item API (Application Programming Interface) to zestaw reguł i protokołów umożliwiający komunikację między aplikacjami, niekoniecznie tylko przez internet.
+    \item Przykładem może być API Windows, które pozwala na dostęp do funkcji systemowych z poziomu innej aplikacji.
+    \item API dostarcza interfejs programistyczny, dzięki któremu programiści mogą korzystać z funkcjonalności innych programów lub usług.
+    \item W ten sposób można tworzyć nowe aplikacje, wykorzystując już istniejące zasoby — na przykład pobierać dane lub wywoływać usługi zdalne.
+    \item API pozwala na współdzielenie danych i funkcji między różnymi systemami, co ułatwia integrację i budowanie bardziej zaawansowanych rozwiązań.
+  \end{itemize}
+
+  \vspace{1ex}
+  \textbf{Przykłady API działających przez HTTP:}
+  \begin{itemize}
+    \item \url{https://jsonplaceholder.typicode.com/}
+    \item \url{https://api.github.com}
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Budujemy własne API (Flask)}
+  \begin{itemize}
+    \item Jeden adres zasobu – różne metody (GET, POST, PUT, DELETE…)
+    \item Kod stanu HTTP opisuje wynik (200, 201, 404…)
+    \item JSON to standardowy format danych (czytelny dla ludzi i maszyn)
+  \end{itemize}
+
+  \vspace{1ex}
+  \begin{lstlisting}[style=dark, language=python, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+ksiazki = [
+    {"id": 1, "tytul": "Przygody Tomka Sawyera", "autor": "Mark Twain"},
+    {"id": 2, "tytul": "Władca Pierścieni", "autor": "J.R.R. Tolkien"},
+    {"id": 3, "tytul": "Ojciec Chrzestny", "autor": "Mario Puzo"}
+]
+  \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Endpoint GET – lista książek}
+  \begin{lstlisting}[style=dark, language=python, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+@app.route("/ksiazki")
+def lista_ksiazek():
+    return jsonify(ksiazki)          # 200 OK
+  \end{lstlisting}
+
+  \vspace{1ex}
+  \begin{itemize}
+    \item Żądanie: \texttt{GET /ksiazki}
+    \item Odpowiedź: \texttt{200 OK} + JSON z tablicą książek
+  \end{itemize}
+\end{frame}
+
+
+\begin{frame}[fragile]{Endpoint POST – dodawanie książki}
+  \begin{lstlisting}[style=dark, language=python, basicstyle=\ttfamily\scriptsize\color{fgcode}, numbers=none, xleftmargin=1em, xrightmargin=1em]
+@app.route("/ksiazki", methods=["POST"])
+def dodaj_ksiazke():
+    nowa = request.json              # oczekuje {"id": 4, "tytul": "...", "autor": "..."}
+    ksiazki.append(nowa)
+    return jsonify(nowa), 201        # 201 Created
+  \end{lstlisting}
+
+  \vspace{1ex}
+  \begin{itemize}
+    \item Żądanie: \texttt{POST /ksiazki} + nagłówek \texttt{Content-Type: application/json}
+    \item Odpowiedź: \texttt{201 Created} + JSON nowo dodanego rekordu
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Protokoły aplikacyjne / Style interfejsów API}
+  \begin{itemize}
+    \item HTTP to protokół transportowy używany do przesyłania żądań i odpowiedzi; REST to styl architektury, który korzysta z HTTP do operacji na zasobach
+    \item REST API najczęściej zwraca JSON (dawniej bywał XML), wykorzystuje standardowe metody HTTP (GET, POST, PUT, DELETE) i kody statusu
+    \item GraphQL to język zapytań zbudowany nad HTTP (można go kapsułkować w POST), pozwala klientowi precyzyjnie określić, jakich danych potrzebuje
+    \item MQTT to lekki protokół publikuj–subskrybuj, używany głównie w IoT i przesyłaniu strumieniowym danych, nie jest typowym API-em REST-owym
+    \item WebSockets oferują dwukierunkową, utrzymywaną na stałe sesję TCP, często stosowane do czatu, powiadomień lub strumieniowania (np. wraz z MQTT)
+    \item SOAP to starszy protokół XML-owy oparty na wiadomościach SOAP, dziś rzadko spotykany (pozostał głównie w starszych systemach korporacyjnych)
+  \end{itemize}
+\end{frame}
+
+
+\end{document}

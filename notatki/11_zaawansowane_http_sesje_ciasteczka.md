@@ -1,0 +1,4 @@
+what are:
+
+- cookies
+- sessions

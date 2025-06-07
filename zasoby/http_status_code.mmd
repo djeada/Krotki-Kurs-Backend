@@ -1,0 +1,23 @@
+graph TD
+    A[Request Received] --> B{"A problem with the Request?"}
+    B -- Yes --> C{"Request syntactically Correct?"}
+    C -- No --> D["400 Bad Request"]
+    C -- Yes --> E{"Path found?"}
+    E -- No --> F["404 Not Found"]
+    E -- Yes --> G{"Authentication?"}
+    G -- "Missing or invalid" --> H["401 Unauthorized"]
+    G -- "Valid but lacks permission" --> I["403 Forbidden"]
+    G -- Valid --> J{"Valid Request?"}
+    J -- No --> K["400 Bad Request"]
+    J -- Yes --> L{"Invalid domain-specific data?"}
+    L -- Yes --> M["422 Unprocessable Entity"]
+    L -- No --> N{"Success"}
+    N -- POST --> O["201 Created"]
+    N -- "GET PUT/PATCH" --> P["200 OK"]
+    N -- DELETE --> Q["204 No Content"]
+
+    B -- No --> R{"Server Error?"}
+    R -- Yes --> S["5xx Internal Server Error"]
+    R -- No --> T{"Does resource exist?"}
+    T -- No --> U["404 Not Found"]
+    T -- Yes --> N

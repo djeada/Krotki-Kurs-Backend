@@ -117,41 +117,89 @@ Bezpieczeństwo i backup
     Backupy to kopia zapasowa bazy danych, która jest tworzona w celu odtworzenia danych w przypadku awarii lub utraty danych.
     Backup
 
-![image](https://github.com/djeada/Krotki-Kurs-Backend/assets/37275728/29396b00-8da1-4229-ad2d-64b5e0e0a354)
+
+# Architektura 3-warstwowa
+
+## 1. Warstwa klienta (Warstwa prezentacji)
+- Przeglądarka / Aplikacja desktopowa / Mobilna  
+- Odpowiada za prezentację danych użytkownikowi  
+- Często poprzedzona serwerem WWW (Apache, Nginx, httpd itp.)
+
+```txt
+[Klient] → [Webserver (Apache, Nginx, HTTPD)] → [App Server]
+````
+
+---
+
+## 2. Warstwa aplikacji (Warstwa logiki biznesowej)
+
+* **Aplikacja** napisana w:
+
+  * Java, Python, C#, JavaScript/Node.js itp.
+* **Serwer aplikacyjny** zawiera kod biznesowy
+* Podstawowe elementy:
+
+  * **System operacyjny**
+  * **Sprzęt (hardware)**
+
+```txt
++--------------------------------------+
+|  Serwer aplikacyjny (Application)    |
+|  — Java, Python, .NET, Node.js etc. |
+|  — Zawiera logikę biznesową         |
+|  — System operacyjny                |
+|  — Sprzęt                           |
++--------------------------------------+
+```
+
+---
+
+## 3. Warstwa bazy danych (Warstwa danych)
+
+* **Serwer bazodanowy** obsługuje systemy RDBMS:
+
+  * MySQL, Oracle, MS SQL Server itp.
+* Przechowuje i udostępnia dane aplikacji
+* Podstawowe elementy:
+
+  * **System operacyjny**
+  * **Sprzęt (hardware)**
+
+```txt
++--------------------------------------+
+|  Serwer bazy danych (Database)       |
+|  — MySQL, Oracle, MSSQL itp.         |
+|  — System operacyjny                |
+|  — Sprzęt                           |
++--------------------------------------+
+```
+
+---
+
+## Komunikacja w sieci
+
+* Urządzenia wymieniają się danymi za pomocą:
+
+  * **Adresu IP**
+  * **Nazwy hosta**
+
+Przykład:
+
+```txt
+[App Server] ⇄ [Database Server]
+   ↕ IP / Hostname
+```
+
+---
+
+> **Uwaga:**
+>
+> * Serwer WWW (np. Apache, Nginx) często działa jako „bramka” pomiędzy klientem a serwerem aplikacyjnym.
+> * Każda z warstw może być fizycznie odseparowana na różnych maszynach lub instancjach w chmurze.
+
+```
 
 
 
 
-1. **Wprowadzenie**
-   - Wideo koncentruje się na zrozumieniu zakładki sieciowej w DevTools, przydatnej w rozwoju backendu i frontendu.
 
-2. **Dostęp do Zakładki Sieciowej**
-   - Dostępna w Chrome i Firefox przez menu (trzy kropki > Więcej narzędzi > Narzędzia deweloperskie > Sieć).
-
-3. **Pola w Zakładce Sieciowej**
-   - **Nazwa:** Żądany zasób.
-   - **Metoda:** Używana metoda HTTP (np. GET).
-   - **Status:** Status odpowiedzi z serwera (np. 200 oznacza sukces).
-   - **Protokół:** Protokół komunikacyjny (np. HTTP/1.1, HTTP/2, HTTP/3).
-   - **Schemat:** Wskazuje, czy połączenie jest zabezpieczone (HTTP vs. HTTPS).
-   - **Adres zdalny:** Adres IP serwera i port.
-   - **Typ:** Typ zasobu (np. dokument, obraz).
-   - **Inicjator:** Identyfikuje źródło żądania.
-   - **Rozmiar:** Rozmiar odpowiedzi.
-   - **Czas:** Czas trwania żądania.
-   - **ID połączenia:** Identyfikuje połączenie TCP.
-
-Example.org
-Apache.org
-5. **Kluczowe Spostrzeżenia**
-   - HTTP/1.1 wymaga wielu połączeń TCP, ograniczając liczbę równoległych żądań.
-   - HTTP/2 pozwala na wiele żądań przez jedno połączenie TCP, poprawiając wydajność.
-   - HTTP/3 używa UDP, zapewniając szybsze i bardziej bezpieczne połączenia, ale z innymi szczegółami implementacyjnymi.
-
-6. **Śledzenie i Reklamy**
-   - Żądania do usług zewnętrznych (Google Tag Manager, Google Analytics, Facebook) w celu śledzenia.
-   - Ważność bezpiecznych połączeń (HTTPS) w celu zapobiegania przechwytywaniu danych.
-
-7. **Wskazówki Dotyczące Wydajności i Bezpieczeństwa**
-   - Unikaj mieszania treści (HTTP i HTTPS), aby zapobiec zagrożeniom bezpieczeństwa i poprawić wydajność.
-   - Optymalizuj strony internetowe, redukując niepotrzebne przekierowania.
